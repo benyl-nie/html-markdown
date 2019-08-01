@@ -19,7 +19,7 @@ app.myUse = async (middlewareName) => {
   return app;
 }
 
-app.myUse('loadHtml');
+app.myUse('html2md');
 
 
 module.exports = app;
