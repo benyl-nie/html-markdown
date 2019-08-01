@@ -28,6 +28,8 @@
     "@babel/preset-env": "^7.5.5",
     "@babel/preset-react": "^7.0.0",
     "babel-loader": "^8.0.6",
+    "cheerio": "^1.0.0-rc.3",
+    "config": "^3.2.2",
     "css-loader": "^3.1.0",
     "file-loader": "^4.1.0",
     "html-loader": "^0.5.5",
