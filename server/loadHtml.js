@@ -1,14 +1,19 @@
-const http = require('http');
-const cheerio = require('cheerio');
+const request = require('request');
 
-const htmlCherroio = new Promise((resolve, reject) => {
-  const pageUrl = 'http://www.mcake.com/shop/110/index.html#mainer_top';
-  http.get(pageUrl, res => {
-    const str =
+const getHtmlByUrl = (href) => {
+  return new Promise((resolve, reject) => { 
+    request(href, (err, response, body) => {
+      if (!err && response.statusCode == 200) {
+        console.log(body);// body即为目标页面的html
+        resolve();
+      } else {
+        console.log('get page error url => ' + href);
+        reject();
+      }
+    });
   });
-  console.log('1111http');
-});
+}
 
-module.exports = htmlCherroio;
+module.exports = getHtmlByUrl('https://www.baidu.com/');
 
 
