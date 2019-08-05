@@ -12,7 +12,7 @@ app.myUse = async (middlewareName) => {
   try {
     promise = await middleware(app, config);
   } catch(e) {
-    console.log(`here load middlemare ${middleware} error`);
+    console.info(`here load middlemare ${middleware} error`);
   }
 
   promise && app.use(promise, middleware);
