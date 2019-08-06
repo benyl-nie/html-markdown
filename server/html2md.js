@@ -8,7 +8,11 @@ const getHtmlByUrl = async (href) => {
     request(href, (err, response, body) => {
       if (!err && response.statusCode == 200) {
         // console.log(body); // body即为目标页面的html
-        html2Md(body);
+        try {
+          await html2Md(body);
+        } catch(e) {
+          console.log(`html parse md err => ${e}`);
+        }
         resolve();
       } else {
         console.log('get page error url => ' + href);
