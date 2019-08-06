@@ -16,7 +16,8 @@ const tagHtml = [
   {key: 'h5', value: '#####'},
   {key: 'h6', value: '######'},
   {key: 'p', value: ''},
-  {key: 'li', value: '-'}
+  {key: 'li', value: '-'},
+  {key: 'img', value: '![]'}
 ];
 
 const getHtmlByUrl = async (href) => {
@@ -41,9 +42,9 @@ const html2Xml = async (str) => {
     const doc = new xmlDom().parseFromString(contentStr);
     const length = doc.childNodes.length;
 
-   for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
-    deepTraversal(doc.childNodes[nodeIndex]);
-   }
+    for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
+      deepTraversal(doc.childNodes[nodeIndex]);
+    }
    console.info(markdownStr);
    return markdownStr;
 
@@ -56,11 +57,9 @@ const deepTraversal = (node) => {
     nodes.push(node);
     let children = node.childNodes;
     markdownStr += xml2Md(node);
-
     if (children) {
       for (let i = 0; i < children.length; i++ ) {
         deepTraversal(children[i]);
-
       }
     }
   }
@@ -72,7 +71,19 @@ const xml2Md = (node) => {
   tagHtml.filter((item) => {
     const nodeName = node.nodeName;
     if (item.key === nodeName) {
-      mds += `${item.value} ${node.childNodes[0].data || node.data} \n`;
+      if (item.key === 'img') {
+        let attrLen = node.attributes.length;
+        let imgBase = '', imgSour = '', imgSrc = '';
+        for (let attrIndex = 0; attrIndex < attrLen; attrIndex ++) {
+          const attrItem = node.attributes[attrIndex];
+          if (attrItem.nodeName === 'data-image-src') imgSour = attrItem.nodeValue;
+          if (attrItem.nodeName === 'data-base-url') imgBase = attrItem.nodeValue;
+          imgSrc = imgBase + imgSour;
+        }
+        mds += `${item.value}(${imgSrc})\n`;
+      } else {
+        mds += `${item.value} ${node.childNodes[0].data || node.data} \n`;
+      }
     }
   });
   mds += `\n`;
