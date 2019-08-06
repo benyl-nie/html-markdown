@@ -15,7 +15,8 @@ const tagHtml = [
   {key: 'h4', value: '####'},
   {key: 'h5', value: '#####'},
   {key: 'h6', value: '######'},
-  {key: 'p', value: ''}
+  {key: 'p', value: ''},
+  {key: 'li', value: '-'}
 ];
 
 const getHtmlByUrl = async (href) => {
@@ -38,7 +39,6 @@ const html2Xml = async (str) => {
     let $ = cheerio.load(str);
     let contentStr = $('#main-content').html();
     const doc = new xmlDom().parseFromString(contentStr);
-    // console.info(doc.childNodes.length);
     const length = doc.childNodes.length;
 
    for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
@@ -55,11 +55,12 @@ const deepTraversal = (node) => {
   if (node !== null) {
     nodes.push(node);
     let children = node.childNodes;
-    // console.info(children);
     markdownStr += xml2Md(node);
+
     if (children) {
       for (let i = 0; i < children.length; i++ ) {
-        deepTraversal(children[i].childNodes);
+        deepTraversal(children[i]);
+
       }
     }
   }
@@ -68,11 +69,13 @@ const deepTraversal = (node) => {
 
 const xml2Md = (node) => {
   let mds = ``;
-  tagHtml.filter((item, index) => {
-    if (item.key === node.nodeName) {
-      mds += `${item.value} ${node.childNodes[0].data} \n`;
+  tagHtml.filter((item) => {
+    const nodeName = node.nodeName;
+    if (item.key === nodeName) {
+      mds += `${item.value} ${node.childNodes[0].data || node.data} \n`;
     }
   });
+  mds += `\n`;
   return mds;
 };
 
