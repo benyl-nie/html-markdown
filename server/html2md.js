@@ -1,7 +1,7 @@
 const request = require('request');
 const cheerio = require('cheerio');
 // const lodash = require('lodash');
-// const xpath = require('xpath.js');
+const xpath = require('xpath.js');
 const xmlDom = require('xmldom').DOMParser;
 
 const demostr = require('./tpl/ftl');
@@ -16,6 +16,7 @@ const tagHtml = [
   {key: 'h5', value: '#####'},
   {key: 'h6', value: '######'},
   {key: 'p', value: ''},
+  {key: 'a', value: '[]()'},
   {key: 'li', value: '-'},
   {key: 'img', value: '![]'}
 ];
@@ -41,8 +42,9 @@ const html2Xml = async (str) => {
     let contentStr = $('#main-content').html();
     const doc = new xmlDom().parseFromString(contentStr);
     const length = doc.childNodes.length;
+    // console.log(length);
 
-    for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
+    for (let nodeIndex = 0; nodeIndex < 3; nodeIndex ++) {
       deepTraversal(doc.childNodes[nodeIndex]);
     }
    console.info(markdownStr);
@@ -52,6 +54,9 @@ const html2Xml = async (str) => {
 };
 
 const deepTraversal = (node) => {
+  // console.log(`***********************start*********************\n`);
+  // console.info(node);
+  // console.log(`***********************end*********************\n`);
   let nodes = [];
   if (node !== null) {
     nodes.push(node);
@@ -81,6 +86,11 @@ const xml2Md = (node) => {
           imgSrc = imgBase + imgSour;
         }
         mds += `${item.value}(${imgSrc})\n`;
+      } else if (item.key === 'a') {
+        console.info(node.attributes);
+        // node.attributes.filter((aItem) => {
+
+        // });
       } else {
         mds += `${item.value} ${node.childNodes[0].data || node.data} \n`;
       }
