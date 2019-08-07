@@ -17,6 +17,7 @@ const tagHtml = [
   {key: 'h6', value: '######'},
   {key: 'p', value: ''},
   {key: 'span', value: ''},
+  {key: 'br', value: ''},
   {key: 'div', value: ''},
   {key: 'a', value: '[]()'},
   {key: 'li', value: '-'},
@@ -44,15 +45,10 @@ const html2Xml = async (str) => {
     let contentStr = $('#main-content').html();
     const doc = new xmlDom().parseFromString(contentStr);
     let length = 0;
-    // if (doc && doc.childNodes && doc.childNodes.length > 0){
-    //   length = doc.childNodes.length;
-    // }
     length = doc.childNodes && doc.childNodes.length ;
-    // console.log(length);
 
-    for (let nodeIndex = 1; nodeIndex < 2; nodeIndex ++) {
+    for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
       deepTraversal(doc.childNodes[nodeIndex]);
-      // console.info(doc.childNodes[nodeIndex]);
     }
    console.info(markdownStr);
    return markdownStr;
@@ -61,9 +57,9 @@ const html2Xml = async (str) => {
 };
 
 const deepTraversal = (node) => {
-  console.log(`***********************start*********************\n\n`);
-  console.info(node);
-  console.log(`***********************end*********************\n\n`);
+  // console.log(`***********************start*********************\n\n`);
+  // console.info(node);
+  // console.log(`***********************end*********************\n\n`);
   let nodes = [];
   if (node !== null) {
     nodes.push(node);
@@ -94,20 +90,18 @@ const xml2Md = (node) => {
         }
         mds += `${item.value}(${imgSrc})\n`;
       } else if (item.key === 'a') {
-        // console.log(`***********************node.attributes start*********************\n\n`);
-        // console.info(node.attributes);
-        // console.log(`***********************node.attributes end*********************\n\n`);
-        let alink = '', ades = '';
+        let alink = '';
         for (let aIndex = 0; aIndex < node.attributes.length; aIndex ++) {
             const aItem = node.attributes[aIndex];
             if (aItem.nodeName === 'href') {
               alink = aItem.nodeValue;
-            } 
+            }
         }
-        alink = `[${node.childNodes[0],data}](#${alink})`;
+        alink = `[${node.childNodes[0].data}](${alink})`;
         mds += `${alink} \n`;
       } else {
-        mds += `${item.value} ${node.childNodes[0].data || node.data} \n`;
+        let md = `${item.value} ${node.childNodes[0].data || node.data}`;
+        mds += md;
       }
     }
   });
