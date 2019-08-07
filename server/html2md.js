@@ -1,10 +1,11 @@
 const request = require('request');
 const cheerio = require('cheerio');
 // const lodash = require('lodash');
-const xpath = require('xpath.js');
+const xpath = require('xpath');
 const xmlDom = require('xmldom').DOMParser;
 
 const demostr = require('./tpl/ftl');
+const httpUrl = 'https://wiki.maoyan.com';
 
 let markdownStr = ``;
 
@@ -15,11 +16,20 @@ const tagHtml = [
   {key: 'h4', value: '####'},
   {key: 'h5', value: '#####'},
   {key: 'h6', value: '######'},
+  {key: 'strong', value: '#####'},
+  {key: 'hr', value: '---'},
   {key: 'p', value: ''},
   {key: 'span', value: ''},
   {key: 'br', value: ''},
-  {key: 'div', value: ''},
+  // {key: 'div', value: ''},
+  // {key: 'table', value: ''},
+  {key: 'thead', value: ''},
+  {key: 'tbody', value: ''},
+  // {key: 'tr', value: ''},
+  // {key: 'th', value: ''},
+  // {key: 'td', value: ''},
   {key: 'a', value: '[]()'},
+  {key: 'ul', value: ''},
   {key: 'li', value: '-'},
   {key: 'img', value: '![]'}
 ];
@@ -46,7 +56,7 @@ const html2Xml = async (str) => {
     const doc = new xmlDom().parseFromString(contentStr);
     let length = 0;
     length = doc.childNodes && doc.childNodes.length ;
-
+    // console.log(length);
     for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
       deepTraversal(doc.childNodes[nodeIndex]);
     }
@@ -57,14 +67,20 @@ const html2Xml = async (str) => {
 };
 
 const deepTraversal = (node) => {
-  // console.log(`***********************start*********************\n\n`);
-  // console.info(node);
-  // console.log(`***********************end*********************\n\n`);
   let nodes = [];
   if (node !== null) {
     nodes.push(node);
     let children = node.childNodes;
-    markdownStr += xml2Md(node);
+    // console.log(xml2Md(node).trim() === 'undefined');
+    const markdown = xml2Md(node);
+    // markdown.trim().replace('undefined', '');
+    markdownStr += `${xml2Md(node)} \n` ;
+    markdownStr = markdownStr.replace('undefined', '');
+    markdownStr = markdownStr.replace(`\n\n`, '');
+    // if (markdown.trim() !== 'undefined') {
+
+    // } else if ()
+
     if (children) {
       for (let i = 0; i < children.length; i++ ) {
         deepTraversal(children[i]);
@@ -88,7 +104,7 @@ const xml2Md = (node) => {
           if (attrItem.nodeName === 'data-base-url') imgBase = attrItem.nodeValue;
           imgSrc = imgBase + imgSour;
         }
-        mds += `${item.value}(${imgSrc})\n`;
+        mds += `${item.value}(${imgSrc})`;
       } else if (item.key === 'a') {
         let alink = '';
         for (let aIndex = 0; aIndex < node.attributes.length; aIndex ++) {
@@ -97,17 +113,75 @@ const xml2Md = (node) => {
               alink = aItem.nodeValue;
             }
         }
+        if (alink.substr(0,1) === '/') alink = `${httpUrl}${alink}`;
         alink = `[${node.childNodes[0].data}](${alink})`;
-        mds += `${alink} \n`;
+        mds += `${alink}`;
+      } else if (item.key === 'thead') {
+        // let theadmd = ``;
+        // theadmd += table2Md(node, 'thead');
+        // mds += theadmd;
+      } else if (item.key === 'tbody') {
+        // let theadmd = ``;
+        // theadmd += table2Md(node, 'tbody');
+        // mds += theadmd;
       } else {
-        let md = `${item.value} ${node.childNodes[0].data || node.data}`;
+        let md = `${item.value} ${(node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data)}`;
         mds += md;
       }
     }
+    // mds += `\n`;
   });
-  mds += `\n`;
+
   return mds;
 };
+
+const table2Md = (node, type) => {
+  const theadAttr = node.attributes;
+  if (type === 'tbody') {
+    let tbodymd = tbody2Md(node) || ``;
+    return tbodymd;
+  } else {
+    for (let attrIndex = 0; attrIndex < theadAttr.length; attrIndex ++) {
+      if (theadAttr[attrIndex].nodeName === 'class' && theadAttr[attrIndex].nodeValue === 'tableFloatingHeaderOriginal') {
+        let theadmd = thead2Md(node) || ``;
+        return theadmd;
+      }
+    }
+  }
+}
+
+const thead2Md = (node) => {
+  const dom = new xmlDom().parseFromString(node.toString());
+  const divxpath = xpath.select("//div", dom);
+  let theadmd = ``;
+  for(let t = 0; t < divxpath.length; t++) {
+    theadmd += `${divxpath[t].childNodes[0].data} |`
+  }
+  theadmd += `\n`;
+  for(let t = 0; t < divxpath.length; t++) {
+    theadmd += `------------ |`
+  }
+  theadmd += `\n`
+  // console.info(theadmd);
+  return theadmd;
+}
+
+const tbody2Md = (node) => {
+  // console.info(node.toString());
+  const trDom = new xmlDom().parseFromString(node.toString());
+  const trxpath = xpath.select('//tr', trDom);
+  let tbodymd = ``;
+  for (let trIndex = 0; trIndex < trxpath.length; trIndex ++) {
+    tbodymd += tr2Md(trxpath[trIndex]);
+    // console.log(`****************start*************`);
+    // console.info(trxpath[trIndex]);
+    // console.log(`****************over*************`);
+  }
+}
+
+const tr2Md = () => {
+
+}
 
 
 
