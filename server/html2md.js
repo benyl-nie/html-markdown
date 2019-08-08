@@ -9,6 +9,7 @@ const httpUrl = 'https://wiki.maoyan.com';
 
 let markdownStr = ``;
 
+
 const tagHtml = [
   {key: 'h1', value: '#'},
   {key: 'h2', value: '##'},
@@ -16,7 +17,7 @@ const tagHtml = [
   {key: 'h4', value: '####'},
   {key: 'h5', value: '#####'},
   {key: 'h6', value: '######'},
-  {key: 'strong', value: '#####'},
+  {key: 'strong', value: '**'},
   {key: 'hr', value: '---'},
   {key: 'p', value: ''},
   {key: 'span', value: ''},
@@ -29,10 +30,11 @@ const tagHtml = [
   // {key: 'th', value: ''},
   // {key: 'td', value: ''},
   {key: 'a', value: '[]()'},
-  {key: 'ul', value: ''},
-  {key: 'li', value: '-'},
+  // {key: 'ul', value: ''},
+  {key: 'li', value: '*'},
   {key: 'img', value: '![]'}
 ];
+
 
 const getHtmlByUrl = async (href) => {
   return new Promise((resolve, reject) => {
@@ -71,15 +73,10 @@ const deepTraversal = (node) => {
   if (node !== null) {
     nodes.push(node);
     let children = node.childNodes;
-    // console.log(xml2Md(node).trim() === 'undefined');
     const markdown = xml2Md(node);
-    // markdown.trim().replace('undefined', '');
-    markdownStr += `${xml2Md(node)} \n` ;
-    markdownStr = markdownStr.replace('undefined', '');
-    markdownStr = markdownStr.replace(`\n\n`, '');
-    // if (markdown.trim() !== 'undefined') {
+    markdownStr +=  (markdown.trim().substr(-1) === '#' || markdown.trim().substr(-1) === '*' ) ? `${markdown} ` : `${markdown} \r\n` ;
 
-    // } else if ()
+    markdownStr = markdownStr.replace(`\n\n`, '');
 
     if (children) {
       for (let i = 0; i < children.length; i++ ) {
@@ -124,12 +121,21 @@ const xml2Md = (node) => {
         // let theadmd = ``;
         // theadmd += table2Md(node, 'tbody');
         // mds += theadmd;
+      } else if (item.key === 'strong') {
+        const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
+        mds += value === '' ? '' : `**${value}**`;
+        for (let boldAttrIndex = 0; boldAttrIndex < node.childNodes.length; boldAttrIndex ++) {
+          mds += xml2Md(node.childNodes[boldAttrIndex]);
+        }
+        // console.info(mds);
       } else {
-        let md = `${item.value} ${(node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data)}`;
+        const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
+        let md = value !== '' ? `${item.value} ${value}` : `${item.value} `;
+
         mds += md;
+
       }
     }
-    // mds += `\n`;
   });
 
   return mds;
@@ -167,7 +173,6 @@ const thead2Md = (node) => {
 }
 
 const tbody2Md = (node) => {
-  // console.info(node.toString());
   const trDom = new xmlDom().parseFromString(node.toString());
   const trxpath = xpath.select('//tr', trDom);
   let tbodymd = ``;
