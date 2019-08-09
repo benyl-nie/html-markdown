@@ -36,6 +36,7 @@ const tagHtml = [
 ];
 
 
+
 const getHtmlByUrl = async (href) => {
   return new Promise((resolve, reject) => {
     request(href, (err, response, body) => {
@@ -70,14 +71,20 @@ const html2Xml = async (str) => {
 
 const deepTraversal = (node) => {
   let nodes = [];
+
+  // 过滤目录
+  const marcDom = new xmlDom().parseFromString(node.toString());
+  const marcNode = xpath.select1("/div/@class", marcDom);
+  if (marcNode !== undefined && marcNode.value.indexOf('toc') > -1) {
+    return;
+  }
+
   if (node !== null) {
     nodes.push(node);
     let children = node.childNodes;
     const markdown = xml2Md(node);
-    markdownStr +=  (markdown.trim().substr(-1) === '#' || markdown.trim().substr(-1) === '*' ) ? `${markdown} ` : `${markdown} \r\n` ;
-
+    markdownStr +=  (markdown.trim().substr(-1) === '#' || markdown.trim().substr(-1) === '*') ? `${markdown}` : `${markdown} \r\n` ;
     markdownStr = markdownStr.replace(`\n\n`, '');
-
     if (children) {
       for (let i = 0; i < children.length; i++ ) {
         deepTraversal(children[i]);
@@ -127,11 +134,9 @@ const xml2Md = (node) => {
         for (let boldAttrIndex = 0; boldAttrIndex < node.childNodes.length; boldAttrIndex ++) {
           mds += xml2Md(node.childNodes[boldAttrIndex]);
         }
-        // console.info(mds);
-      } else {
-        const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
-        let md = value !== '' ? `${item.value} ${value}` : `${item.value} `;
-
+      }  else {
+          const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
+          let md = value !== '' ? `${item.value} ${value}` : `${item.value} `;
         mds += md;
 
       }
