@@ -35,6 +35,8 @@ const tagHtml = [
   {key: 'img', value: '![]'}
 ];
 
+const blockLevelTag = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
+
 
 
 const getHtmlByUrl = async (href) => {
@@ -134,7 +136,19 @@ const xml2Md = (node) => {
         for (let boldAttrIndex = 0; boldAttrIndex < node.childNodes.length; boldAttrIndex ++) {
           mds += xml2Md(node.childNodes[boldAttrIndex]);
         }
-      }  else {
+      } else if (item.key === 'p') {
+        const pDom = new xmlDom().parseFromString(node.toString());
+        const pNode = xpath.select("//p/text()", pDom);
+        let md = ``;
+        if (pNode.length> 0) {
+          for (let pIndex = 0; pIndex < pNode.length; pIndex ++) {
+            md += pNode[pIndex].nodeValue;
+          }
+
+        }
+        mds += md;
+
+      } else {
           const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
           let md = value !== '' ? `${item.value} ${value}` : `${item.value} `;
         mds += md;
@@ -192,7 +206,6 @@ const tbody2Md = (node) => {
 const tr2Md = () => {
 
 }
-
 
 
 // module.exports = getHtmlByUrl('https://www.baidu.com/');
