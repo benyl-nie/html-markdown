@@ -85,8 +85,8 @@ const deepTraversal = (node) => {
     nodes.push(node);
     let children = node.childNodes;
     const markdown = xml2Md(node);
-    markdownStr +=  (markdown.trim().substr(-1) === '#' || markdown.trim().substr(-1) === '*') ? `${markdown}` : `${markdown} \r\n` ;
-    markdownStr = markdownStr.replace(`\n\n`, '');
+    markdownStr +=  (markdown.trim().substr(-1) === '#' || markdown.trim().substr(-1) === '*' || markdown === '' || markdown.trim().substr(-1) === '|') ? `${markdown}` : `${markdown}\n` ;
+    // markdownStr = markdownStr.replace(`\n\n`, '');
     if (children) {
       for (let i = 0; i < children.length; i++ ) {
         deepTraversal(children[i]);
@@ -98,6 +98,7 @@ const deepTraversal = (node) => {
 
 const xml2Md = (node) => {
   let mds = ``;
+  
   tagHtml.filter((item) => {
     const nodeName = node.nodeName;
     if (item.key === nodeName) {
@@ -123,18 +124,20 @@ const xml2Md = (node) => {
         alink = `[${node.childNodes[0].data}](${alink})`;
         mds += `${alink}`;
       } else if (item.key === 'thead') {
-        // let theadmd = ``;
-        // theadmd += table2Md(node, 'thead');
-        // mds += theadmd;
+        let theadmd = ``;
+        theadmd = table2Md(node, 'thead');
+        mds += theadmd;
       } else if (item.key === 'tbody') {
-        // let theadmd = ``;
-        // theadmd += table2Md(node, 'tbody');
-        // mds += theadmd;
+        let tbodymd = ``;
+        tbodymd = table2Md(node, 'tbody');
+        mds += tbodymd;
+        // console.info(mds);
       } else if (item.key === 'strong') {
         const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
         mds += value === '' ? '' : `**${value}**`;
         for (let boldAttrIndex = 0; boldAttrIndex < node.childNodes.length; boldAttrIndex ++) {
-          mds += xml2Md(node.childNodes[boldAttrIndex]);
+          // console.info(node.childNodes[boldAttrIndex]);
+          // mds += xml2Md(node.childNodes[boldAttrIndex]);
         }
       } else if (item.key === 'p') {
         const pDom = new xmlDom().parseFromString(node.toString());
@@ -156,7 +159,7 @@ const xml2Md = (node) => {
       }
     }
   });
-
+  mds.replace(`\n`, '');
   return mds;
 };
 
@@ -169,6 +172,9 @@ const table2Md = (node, type) => {
     for (let attrIndex = 0; attrIndex < theadAttr.length; attrIndex ++) {
       if (theadAttr[attrIndex].nodeName === 'class' && theadAttr[attrIndex].nodeValue === 'tableFloatingHeaderOriginal') {
         let theadmd = thead2Md(node) || ``;
+        return theadmd;
+      } else {
+        let theadmd = '';
         return theadmd;
       }
     }
@@ -187,7 +193,6 @@ const thead2Md = (node) => {
     theadmd += `------------ |`
   }
   theadmd += `\n`
-  // console.info(theadmd);
   return theadmd;
 }
 
@@ -197,14 +202,28 @@ const tbody2Md = (node) => {
   let tbodymd = ``;
   for (let trIndex = 0; trIndex < trxpath.length; trIndex ++) {
     tbodymd += tr2Md(trxpath[trIndex]);
-    // console.log(`****************start*************`);
-    // console.info(trxpath[trIndex]);
-    // console.log(`****************over*************`);
   }
+  return tbodymd;
 }
 
-const tr2Md = () => {
-
+const tr2Md = (node) => {
+  const tdDom = new xmlDom().parseFromString(node.toString());
+  const tdpath = xpath.select("//td", tdDom);
+  let trmd = ``;
+  for (let tdIndex = 0; tdIndex < tdpath.length; tdIndex ++) {
+    
+    let tdmd = ``;
+    for (let tdChildIndex = 0; tdChildIndex < tdpath[tdIndex].childNodes.length; tdChildIndex ++ ) {
+      if (tdpath[tdIndex].childNodes[tdChildIndex].nodeName === '#text') {
+        tdmd += tdpath[tdIndex].childNodes[tdChildIndex].data + '|';
+      } else {
+        tdmd += xml2Md(tdpath[tdIndex].childNodes[tdChildIndex]) + '|';
+      }
+    }
+    trmd += tdmd ;
+  }
+  trmd += `\n`;
+  return trmd;
 }
 
 
