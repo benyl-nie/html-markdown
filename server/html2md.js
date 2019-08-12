@@ -44,7 +44,7 @@ const tagHtml = [
 const blockLevelTag = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 const textLevelTag = ['span', '#text', 'br', 'pre', 'a', 'b', 'label', 'strong'];
 const tableNode = ['tr', 'td', 'th'];
-const lineFlagArr = ['#', '*', '', '|'];
+const lineFlagArr = ['#',  '', '|'];
 
 
 // 根据url爬取页面
@@ -96,7 +96,8 @@ const deepTraversal = (node) => {
     let children = node.childNodes;
     const markdown = xml2Md(node);
     // textLevelTag.indexOf(node.nodeName) > -1 ||
-    if (lineFlagArr.indexOf(markdown.trim().substr(-1)) > -1) {
+    // 块级元素整体换行
+    if (lineFlagArr.indexOf(markdown.trim().substr(-1)) > -1 || blockLevelTag.indexOf(node.parentNode.nodeName) > -1) {
       markdownStr += `${markdown}`;
     } else {
       markdownStr += `${markdown}\n`;
@@ -138,6 +139,9 @@ const xml2Md = (node) => {
         case 'p':
           md = p2Md(node, item);
           break;
+        case 'li':
+            md = li2Md(node, item);
+          break;
         default:
           md = default2Md(node, item);
           break;
@@ -150,16 +154,16 @@ const xml2Md = (node) => {
 };
 
 const default2Md = (node, item) => {
+  // 已读节点不再读取
+  if (node.hasRead) return '';
   /**
    * 过滤由table带过来的遍历
    */
   const parentDom = new xmlDom().parseFromString(node.parentNode.toString());
   const parentClass = xpath.select1("//@class", parentDom) && xpath.select1("//@class", parentDom).nodeValue;
   if (parentClass && parentClass.indexOf('table') > -1) return '';
-  if (tableNode.indexOf(node.parentNode.nodeName) > -1) {
-    return '';
-  }
-  if (node.hasRead) return '';
+  if (tableNode.indexOf(node.parentNode.nodeName) > -1) return '';
+  // 主体
   const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
   const md = value !== '' ? `${item.value} ${value}` : `${item.value} `;
   node.hasRead = true;
@@ -167,6 +171,7 @@ const default2Md = (node, item) => {
 }
 
 const img2Md = (node, item) => {
+  if (node.hasRead) return '';
   let attrLen = node.attributes.length;
   let imgBase = '', imgSour = '', imgSrc = '';
   for (let attrIndex = 0; attrIndex < attrLen; attrIndex ++) {
@@ -180,8 +185,8 @@ const img2Md = (node, item) => {
 }
 
 const a2Md = (node, item) => {
-  let alink = '';
   if (node.hasRead) return '';
+  let alink = '';
   for (let aIndex = 0; aIndex < node.attributes.length; aIndex ++) {
       const aItem = node.attributes[aIndex];
       if (aItem.nodeName === 'href') {
@@ -195,8 +200,10 @@ const a2Md = (node, item) => {
 }
 
 const strong2Md = (node, item) => {
+  if (node.hasRead) return '';
   let md = ``;
   const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
+  if (value.trim() === '' || value === undefined || !value) return '';
   for (let boldAttrIndex = 0; boldAttrIndex < node.childNodes.length; boldAttrIndex ++) {
     // console.info(node.childNodes[boldAttrIndex]);
     // mds += xml2Md(node.childNodes[boldAttrIndex]);
@@ -207,6 +214,8 @@ const strong2Md = (node, item) => {
 }
 
 const p2Md = (node, item) => {
+  if (node.hasRead) return '';
+
   const nodeLen = node.childNodes.length;
   let md = ``;
   for (let nodeIndex = 0; nodeIndex < nodeLen; nodeIndex ++) {
@@ -218,6 +227,7 @@ const p2Md = (node, item) => {
       const pNode = xpath.select("//text()", pDom);
       for (let pIndex = 0; pIndex < pNode.length; pIndex ++) {
         md += pNode[pIndex].nodeValue;
+        pNode[pIndex].hasRead = true;
       }
     }
     node.childNodes[nodeIndex].hasRead = true;
@@ -225,16 +235,49 @@ const p2Md = (node, item) => {
   return md;
 }
 
+li2Md = (node, item) => {
+  if (node.hasRead) return '';
+  const liDom = new xmlDom().parseFromString(node.toString());
+  const lixpath = xpath.select('//text()', liDom);
+  let md = `* `;
+  // console.info(node.toString());
+
+  for (let index = 0; index < node.childNodes.length; index ++) {
+    // console.info(node.childNodes[index].toString());
+    // console.log('********************');
+    const nodeName = node.childNodes[index].nodeName;
+    if (tagHtml.indexOf(nodeName) > -1) {
+      if (nodeName === 'ul') md += `\n    `;
+      md += xml2Md(node.childNodesp[index]);
+    } else {
+      md += node.childNodes[index].nodeValue;
+    }
+  }
+  // node.childNodes.forEach(item  => console.info(item.nodeName));
+  // console.log('********************');
+
+  // lixpath.forEach((liItem, liIndex) => {
+  //   md += `${liItem.nodeValue} `;
+
+  //   // console.info(liItem.toString());
+  //   // console.log('********************');
+  // });
+  md += `\n`;
+  return md;
+}
+
 const table2Md = (node, type) => {
+  if (node.hasRead) return '';
+
   const theadAttr = node.attributes;
   if (type === 'tbody') {
-    let tbodymd = tbody2Md(node) || ``;
+    let tbodymd = `\n ${tbody2Md(node)}` || ``;
     node.hasRead = true;
     return tbodymd;
   } else {
     for (let attrIndex = 0; attrIndex < theadAttr.length; attrIndex ++) {
       if (theadAttr[attrIndex].nodeName === 'class' && theadAttr[attrIndex].nodeValue === 'tableFloatingHeaderOriginal') {
-        let theadmd = thead2Md(node) || ``;
+        let theadmd = `\n ${thead2Md(node)}` || ``;
         node.hasRead = true;
         return theadmd;
       } else {
@@ -247,6 +290,8 @@ const table2Md = (node, type) => {
 }
 
 const thead2Md = (node) => {
+  if (node.hasRead) return '';
+
   const dom = new xmlDom().parseFromString(node.toString());
   const divxpath = xpath.select("//tr", dom);
   let theadmd = ``, thdom = null, tdpath = null;
@@ -270,6 +315,8 @@ const thead2Md = (node) => {
 }
 
 const tbody2Md = (node) => {
+  if (node.hasRead) return '';
+
   const trDom = new xmlDom().parseFromString(node.toString());
   const trxpath = xpath.select('//tr', trDom);
   let tbodymd = ``;
@@ -281,11 +328,15 @@ const tbody2Md = (node) => {
     } else {
       tbodymd += tr2Md(trxpath[trIndex]);
     }
+    trxpath[trIndex].hasRead = true;
   }
+  node.hasRead = true;
   return tbodymd;
 }
 
 const tr2Md = (node) => {
+  if(node.hasRead) return '';
+
   const tdDom = new xmlDom().parseFromString(node.toString());
   const tdpath = xpath.select("//td", tdDom);
   let trmd = ``;
@@ -296,21 +347,27 @@ const tr2Md = (node) => {
     trmd += tdmd ;
   }
   trmd += `\n`;
+  node.hasRead = true;
   return trmd;
 }
 
 td2Md = (node) => {
+  if (node.hasRead) return '';
+
   const domtd = new xmlDom().parseFromString(node.toString());
   const domtdVal = xpath.select("//text()", domtd);
   let tdmd = ``;
   for(let tdmdIndex = 0; tdmdIndex < domtdVal.length; tdmdIndex ++) {
     tdmd += `${domtdVal[tdmdIndex].data}  `;
   }
+  node.hasRead = true;
   return tdmd;
 }
 
 // code to markdown
 const codeTrMd = (node) => {
+  if (node.hasRead) return '';
+
   const tdDom = new xmlDom().parseFromString(node.toString());
   const tdpath = xpath.select("//td/div/div", tdDom);
   let codemd = '\n' + '```' + `\n`;
