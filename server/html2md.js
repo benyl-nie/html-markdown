@@ -65,7 +65,7 @@ const html2Xml = async (str) => {
     for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
       deepTraversal(doc.childNodes[nodeIndex]);
     }
-   console.info(markdownStr);
+  //  console.info(markdownStr);
    return markdownStr;
 
   });
@@ -129,9 +129,11 @@ const xml2Md = (node) => {
         mds += theadmd;
       } else if (item.key === 'tbody') {
         let tbodymd = ``;
+        // console.log('***********start*************');
+        // console.info(node.parentNode.nodeName);
+        // console.log('***********end*************');
         tbodymd = table2Md(node, 'tbody');
         mds += tbodymd;
-        // console.info(mds);
       } else if (item.key === 'strong') {
         const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
         mds += value === '' ? '' : `**${value}**`;
@@ -200,8 +202,15 @@ const tbody2Md = (node) => {
   const trDom = new xmlDom().parseFromString(node.toString());
   const trxpath = xpath.select('//tr', trDom);
   let tbodymd = ``;
+  
   for (let trIndex = 0; trIndex < trxpath.length; trIndex ++) {
-    tbodymd += tr2Md(trxpath[trIndex]);
+    if (trxpath[trIndex].toString().indexOf('code') > -1) {
+      // code转化
+      tbodymd += codeTrMd(trxpath[trIndex]);
+      console.info(tbodymd);
+    } else {
+      tbodymd += tr2Md(trxpath[trIndex]);
+    }
   }
   return tbodymd;
 }
@@ -217,6 +226,9 @@ const tr2Md = (node) => {
       if (tdpath[tdIndex].childNodes[tdChildIndex].nodeName === '#text') {
         tdmd += tdpath[tdIndex].childNodes[tdChildIndex].data + '|';
       } else {
+        // console.log('***********start*************');
+        // console.info( tdpath[tdIndex]);
+        // console.log('***********end*************');
         tdmd += xml2Md(tdpath[tdIndex].childNodes[tdChildIndex]) + '|';
       }
     }
@@ -226,6 +238,20 @@ const tr2Md = (node) => {
   return trmd;
 }
 
+const codeTrMd = (node) => {
+  const tdDom = new xmlDom().parseFromString(node.toString());
+  const tdpath = xpath.select("//td/div/div", tdDom);
+  let codemd = '' + '```' + `\n`;
+  for(let codeIndex = 0; codeIndex < tdpath.length; codeIndex ++) {
+    const codeDom = new xmlDom().parseFromString(tdpath[codeIndex].toString());
+    let mdValue = xpath.select("//code/text()", codeDom);
+    console.info(mdValue[0].data);
+    console.log('***********end*************');
+    // codemd += mdValue + `\n`;
+  }
+  codemd += '```\n';
+  return codemd;
+}
 
 // module.exports = getHtmlByUrl('https://www.baidu.com/');
 module.exports = html2Xml(demostr);
