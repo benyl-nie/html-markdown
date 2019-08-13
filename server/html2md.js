@@ -140,9 +140,12 @@ const xml2Md = (node) => {
         case 'p':
           md = p2Md(node, item);
           break;
-        case 'li':
-            md = li2Md(node, item);
-          break;
+        // case 'li':
+        //     md = li2Md(node, item);
+        //   break;
+        case 'ul':
+            md = ul2Md(node, item);
+            break;
         default:
           md = default2Md(node, item);
           break;
@@ -268,6 +271,16 @@ li2Md = (node, item) => {
   node.hasRead = true;
   // md += `\n\n`;
   return md;
+}
+
+
+const ul2Md = (node, item) => {
+  if (node.hasRead) return '';
+  const ulDom = new xmlDom().parseFromString(node.toString());
+  const ulpath = xpath.select("//li", ulDom);
+  // ulpath[0].forEach(item => console.info(item.toString()))
+  console.info(ulpath[0].length);
+  return '';
 }
 
 const table2Md = (node, type) => {
