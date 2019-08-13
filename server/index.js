@@ -1,9 +1,17 @@
 const Koa = require('koa');
 const path = require('path');
 const config = require('config');
+const cookieParser = require('cookie-parser');
 // const loadHtml = require('load-html');
 
 const app = new Koa();
+
+// app.use(cors({
+//   //credentials: true,                //如果需要跨域那么需要设置这两个属性，表示服务器端接受这个域来的信息
+//   //origin: 'http://localhost:8080'
+// }));
+
+app.use(cookieParser());
 
 app.myUse = async (middlewareName) => {
   let app = this;
