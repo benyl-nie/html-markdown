@@ -35,10 +35,11 @@ const tagHtml = [
   {key: 'thead', value: ''},
   {key: 'tbody', value: ''},
   {key: 'a', value: '[]()'},
-  // {key: 'ul', value: ''},
+  {key: 'ul', value: ''},
   {key: 'li', value: '*'},
   {key: 'img', value: '![]'},
-  {key: 'br', value: `\n`}
+  {key: 'br', value: `\n`},
+  // {key: '#text', value: ''}
 ];
 
 const blockLevelTag = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
@@ -237,32 +238,35 @@ const p2Md = (node, item) => {
 
 li2Md = (node, item) => {
   if (node.hasRead) return '';
-  const liDom = new xmlDom().parseFromString(node.toString());
-  const lixpath = xpath.select('//text()', liDom);
-  let md = `* `;
+  let md = ` `;
   // console.info(node.toString());
-
   for (let index = 0; index < node.childNodes.length; index ++) {
-    // console.info(node.childNodes[index].toString());
-    // console.log('********************');
+    if (node.childNodes[index].hasRead) return '';
     const nodeName = node.childNodes[index].nodeName;
-    if (tagHtml.indexOf(nodeName) > -1) {
-      if (nodeName === 'ul') md += `\n    `;
-      md += xml2Md(node.childNodesp[index]);
+    const exitFlag = tagHtml.filter(item => item.key === nodeName);
+    if (exitFlag.length > 0) {
+      console.log('*************************');
+      if (nodeName === 'ul') { // 二级或者三级
+         console.info(node.childNodes[index].toString());
+        // const listTwo = node.childNodes[index].parentNode.nodeName === 'li';
+        const listThree = node.childNodes[index].parentNode.parentNode.parentNode && node.childNodes[index].parentNode.parentNode.parentNode.nodeName === 'li';
+        // console.info(listThree);
+        md += listThree ? `\n          *` : `\n    *`;
+        // console.info(`${nodeName}      ${listThree}`);
+        console.info(md);
+        console.log('***********mdmdmdmmd**************');
+      }
+      // let mdStr = xml2Md(node.childNodes[index]);
+      // console.info(mdStr);
+      md += xml2Md(node.childNodes[index]);
+      console.info(md);
     } else {
-      md += node.childNodes[index].nodeValue;
+      md += `* ${node.childNodes[index].nodeValue}`;
     }
+    node.childNodes[index].hasRead = true;
   }
-  // node.childNodes.forEach(item  => console.info(item.nodeName));
-  // console.log('********************');
-
-  // lixpath.forEach((liItem, liIndex) => {
-  //   md += `${liItem.nodeValue} `;
-
-  //   // console.info(liItem.toString());
-  //   // console.log('********************');
-  // });
-  md += `\n`;
+  node.hasRead = true;
+  // md += `\n\n`;
   return md;
 }
 
