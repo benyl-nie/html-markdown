@@ -34,6 +34,7 @@ const tagHtml = [
   {key: 'pre', value: ''},
   {key: 'br', value: ''},
   {key: 'table', value: ''},
+  {key: 'tr', value: ''},
   {key: 'a', value: '[]()'},
   {key: 'ul', value: ''},
   {key: 'li', value: '*'},
@@ -50,11 +51,11 @@ const lineFlagArr = ['#',  '', '|'];
 const getHtmlByUrl = async (href, cookies) => {
   return new Promise((resolve, reject) => {
     superagent.get(href)
-              .set('cookie', cookies)
+              .set('Cookie', cookies)
               .end((err, res) => {
                 if (err) console.info('get page error url => ' + href);
-                html2Xml(body);
-                console.info(res.text);
+                html2Xml(res.text);
+                // console.info(res.text);
               });
   });
 };
@@ -69,7 +70,7 @@ const html2Xml = async (str) => {
     for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
       deepTraversal(doc.childNodes[nodeIndex]);
     }
-   console.info(markdownStr);
+  //  console.info(markdownStr);
    return markdownStr;
   });
 };
@@ -91,8 +92,10 @@ const deepTraversal = (node) => {
     nodes.push(node);
     let children = node.childNodes;
     const markdown = xml2Md(node);
+    const currentTagFlag = blockLevelTag.indexOf(node.nodeName) > -1;
+    const parentTagFlag = blockLevelTag.indexOf(node.parentNode.nodeName) > -1;
     // 块级元素整体换行
-    if (lineFlagArr.indexOf(markdown.trim().substr(-1)) > -1 || blockLevelTag.indexOf(node.parentNode.nodeName) > -1) {
+    if (lineFlagArr.indexOf(markdown.trim().substr(-1)) > -1 || (!currentTagFlag && parentTagFlag)) {
       markdownStr += `${markdown}`;
     } else {
       markdownStr += `${markdown}\n`;
@@ -127,12 +130,13 @@ const xml2Md = (node) => {
           md = strong2Md(node, item);
           break;
         case 'p':
-          md = p2Md(node, item);
+          md = p2Md(node, item) + `\n`;
           break;
         default:
           md = default2Md(node, item);
           break;
       }
+      if (blockLevelTag.indexOf(node.nodeName) > -1) mds += `\n`;
       mds += md;
     }
   });
@@ -164,10 +168,12 @@ const default2Md = (node, item) => {
     falgThree = true;
   }
 
+  const blockFlag = blockLevelTag.indexOf(node.nodeName) > -1;
   // 主体
   const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
-  const md = value === '' ?  `${item.value} ` : flagTwo ? `\n     ${item.value} ${value}` : falgThree ? `\n          ${item.value} ${value}` : `${item.value} ${value}`;
+  const md = value === '' ?  `${item.value} ` : flagTwo ? `\n     ${item.value} ${value}` : falgThree ? `\n          ${item.value} ${value}` : blockFlag ? `${item.value} ${value}\n` : `${item.value} ${value}`;
   node.hasRead = true;
+  // md += `\n`;
   return md;
 }
 
@@ -216,6 +222,7 @@ const strong2Md = (node, item) => {
 
   let md = ``;
   const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
+  // console.info(node.parentNode.nodeName);
   if (value.trim() === '' || value === undefined || !value) return '';
   md += value === '' ? '' : `**${value}**`;
   node.hasRead = true;
@@ -309,18 +316,25 @@ const codeTrMd = (node) => {
 }
 
 const filterTable = (node) => {
-  const filDom = new xmlDom().parseFromString(node.parentNode.toString());
-  const filClass = xpath.select1('//@class', filDom);
-  if (filClass && filClass.value.indexOf('confluenceT') > -1) return true;
+  const tdNode = findtd(node);
+  console.info(tdNode)
+  // const filClass = xpath.select1('//@class', tdNode);
+  // console.info(filClass && filClass.value);
+  // const filDom = new xmlDom().parseFromString(node.parentNode.toString());
+  // const filClass = xpath.select1('//@class', filDom);
+  // if (filClass && filClass.value.indexOf('confluenceT') > -1) return true;
   return false;
+}
+
+findtd = (node) => {
+  if (node && node.nodeName === 'td') return node;
+  findtd(node && node.parentNode);
 }
 
 const htmlEncode = (str) => {
   return str.replace(/[<>"&\/`']/g, '');
 }
 
-const cookie = {
-
-};
-// module.exports = getHtmlByUrl('www.baidu.com', cookie);
-module.exports = html2Xml(demostr);
+const cookie = 'sticky-uuid4=8e089e9a-0b38-4387-befe-5dc0740d527f:127.0.0.1; JSESSIONID=1EBF1D8A825C4416746BEF70BF44136B; mywork.tab.tasks=false';
+module.exports = getHtmlByUrl('https://wiki.maoyan.com/pages/viewpage.action?pageId=14693585', cookie);
+// module.exports = html2Xml(demostr);
