@@ -37,14 +37,18 @@ const tagHtml = [
   {key: 'tr', value: ''},
   {key: 'a', value: '[]()'},
   {key: 'ul', value: ''},
-  {key: 'li', value: '*'},
+  {key: 'ol', value: ''},
+  // {key: 'li', value: '*'},
   {key: 'img', value: '![]'},
   {key: 'br', value: `\n`},
+  // {key: '#text', value: ''}
 ];
 
 const blockLevelTag = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 const tableNode = ['tr', 'td', 'th', 'table', 'tbody', 'thead'];
+const thdTag = ['td', 'th'];
 const lineFlagArr = ['#',  '', '|'];
+let tdCount = 0;
 
 
 // 根据url爬取页面
@@ -70,7 +74,7 @@ const html2Xml = async (str) => {
     for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
       deepTraversal(doc.childNodes[nodeIndex]);
     }
-  //  console.info(markdownStr);
+  console.info(markdownStr);
    return markdownStr;
   });
 };
@@ -97,6 +101,8 @@ const deepTraversal = (node) => {
     // 块级元素整体换行
     if (lineFlagArr.indexOf(markdown.trim().substr(-1)) > -1 || (!currentTagFlag && parentTagFlag)) {
       markdownStr += `${markdown}`;
+    } else if (markdownStr.trim().substr(-1) === '*' && markdownStr.trim().substr(-2) !== '**'){
+      markdownStr += `    ${markdown}\n`;
     } else {
       markdownStr += `${markdown}\n`;
     }
@@ -132,6 +138,12 @@ const xml2Md = (node) => {
         case 'p':
           md = p2Md(node, item) + `\n`;
           break;
+        case 'ol':
+          md = ul2Md(node, item);
+          break;
+        case 'ul':
+          md = ul2Md(node, item);
+          break;
         default:
           md = default2Md(node, item);
           break;
@@ -147,6 +159,7 @@ const xml2Md = (node) => {
 const default2Md = (node, item) => {
   // 已读节点不再读取
   if (node.hasRead) return '';
+
   /**
    * 过滤由table带过来的遍历
    */
@@ -154,26 +167,59 @@ const default2Md = (node, item) => {
   const parentClass = xpath.select1("//@class", parentDom) && xpath.select1("//@class", parentDom).nodeValue;
   if (parentClass && parentClass.indexOf('table') > -1) return '';
   if (tableNode.indexOf(node.parentNode.nodeName) > -1) return '';
-
-  /**
-   * li 多层次嵌套
-   */
-  const ppnode = node.parentNode.parentNode;
-  const pppnode = ppnode && ppnode.parentNode && ppnode.parentNode.parentNode;
-  let falgThree = false, flagTwo = false;
-  if (node.nodeName === 'li' && ppnode && ppnode.nodeName === 'li' && pppnode && pppnode.nodeName !== 'li') {
-    flagTwo = true;
-  }
-  if (node.nodeName === 'li' && ppnode && ppnode.nodeName === 'li' && pppnode && pppnode.nodeName === 'li') {
-    falgThree = true;
-  }
+  const tableFlag = filterTable(node);
+  let md = ``;
+  if (tableFlag) return '';
 
   const blockFlag = blockLevelTag.indexOf(node.nodeName) > -1;
   // 主体
-  const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
-  const md = value === '' ?  `${item.value} ` : flagTwo ? `\n     ${item.value} ${value}` : falgThree ? `\n          ${item.value} ${value}` : blockFlag ? `${item.value} ${value}\n` : `${item.value} ${value}`;
+  if (blockFlag) {
+    md += blockFlag2Md(node, item);
+  } else {
+    let value = ``;
+    for (let dIndex = 0; dIndex < node.childNodes.length; dIndex ++) {
+      const ccnode = node.childNodes[dIndex];
+      for (let ccIndex = 0; ccIndex < ccnode.length; ccIndex ++) {
+        if (ccnode[ccIndex] && ccnode[ccIndex].hasRead) return;
+        if (ccnode[ccIndex] && ccnode[ccIndex].nodeName === '#text') value += ccnode[ccIndex].data;
+        // const thirdNode = ccnode[ccIndex].childNodes;
+        // for (let thIndex = 0; thIndex < thirdNode.length; thIndex++) {
+        //   if (thirdNode[thIndex] && thirdNode[thIndex].hasRead) return;
+        //   if (thirdNode[thIndex] && thirdNode[thIndex].nodeName === '#text') value += ccnode[ccIndex].data;
+        //   value +=  thirdNode[thIndex] && thirdNode[thIndex].nodeValue || '';
+        // }
+        value +=  ccnode[ccIndex] && ccnode[ccIndex].nodeValue || '';
+
+      }
+    }
+    md = value === '' ? `${item.value} `  :  blockFlag ? `${item.value} ${value}\n` : `${item.value} ${value}`;
+
+
+
+    // if (node.nodeName === '#text') {
+    //   console.info(node.toString());
+    //   value = node && node.data;
+    // } else {
+    //   value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
+    // }
+    // md = value === '' ?  `${item.value} `  :  blockFlag ? `${item.value} ${value}\n` : `${item.value} ${value}`;
+  }
   node.hasRead = true;
   // md += `\n`;
+  return md;
+}
+
+blockFlag2Md = (node, item) => {
+  if (node.hasRead) return '';
+
+  let md = `${item.value} `;
+  for (let index = 0; index < node.childNodes.length; index ++) {
+    if (node.childNodes[index].hasRead) return;
+    if (node.childNodes[index].nodeName === '#text') md += node.childNodes[index].data;
+    md += xml2Md(node.childNodes[index]);
+    node.childNodes[index].hasRead = true;
+  }
+  node.hasRead = true;
   return md;
 }
 
@@ -221,10 +267,10 @@ const strong2Md = (node, item) => {
   if (tableFlag) return '';
 
   let md = ``;
+  const parentSubFlag = blockLevelTag.indexOf(node.parentNode) <= -1 && node.parentNode.nextSibling;
   const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
-  // console.info(node.parentNode.nodeName);
   if (value.trim() === '' || value === undefined || !value) return '';
-  md += value === '' ? '' : `**${value}**`;
+  md += value === '' ? '' : parentSubFlag ? `  **${value}**  ` : `  **${value}**   \n`  ;
   node.hasRead = true;
   return md;
 }
@@ -238,24 +284,101 @@ const p2Md = (node, item) => {
   if (tableFlag) return '';
 
 
-  const nodeLen = node.childNodes.length;
+  const nodeChild = node.childNodes;
   let md = ``;
-  for (let nodeIndex = 0; nodeIndex < nodeLen; nodeIndex ++) {
-    const flag = tagHtml.filter(item => item.key === node.childNodes[nodeIndex].nodeName);
-    if (flag.length > 0) {
-      md += xml2Md(node.childNodes[nodeIndex]);
+  for (let index = 0; index < nodeChild.length; index ++) {
+    if (nodeChild[index].hasRead) return;
+    if (nodeChild[index].nodeName === '#text') {
+      md += nodeChild[index].data;
     } else {
-      const pDom = new xmlDom().parseFromString(node.childNodes[nodeIndex].toString());
-      const pNode = xpath.select("//text()", pDom);
-      for (let pIndex = 0; pIndex < pNode.length; pIndex ++) {
-        md += pNode[pIndex].nodeValue;
-        pNode[pIndex].hasRead = true;
+      const ccnode = nodeChild[index].childNodes;
+      for (let ccIndex = 0; ccIndex < ccnode.length; ccIndex ++) {
+        if (ccnode[ccIndex].nodeName === '#text') md += ccnode[ccIndex].data;
+        md += xml2Md(ccnode[ccIndex]);
       }
+
+
+      // console.info(nodeChild[index].nodeName);
+      // if (nodeChild[index].nodeName === 'span') {
+      //   console.info(md);
+      //   md += xml2Md(node.childNodes[index].childNodes);
+      //   console.info(node.childNodes[index].childNodes.length);
+      //   console.info('*********************************');
+      //   console.info(md);
+      //   console.info('*********************************');
+      // } else {
+      //   md += xml2Md(node.childNodes[index]);
+      // }
+
+      // console.info(node.childNodes[index].toString());
+      // console.info('*********************************');
+      // console.info(md);
+      // console.info('*********************************');
     }
-    node.childNodes[nodeIndex].hasRead = true;
+
+    // console.info(md);
+    // console.info('*********************************');
+    nodeChild[index].hasRead = true;
+    // console.info(md);
   }
+
+  node.hasRead = true;
+
+  // for (let nodeIndex = 0; nodeIndex < nodeLen; nodeIndex ++) {
+  //   const flag = tagHtml.filter(item => item.key === node.childNodes[nodeIndex].nodeName);
+  //   if (flag.length > 0) {
+  //     md += xml2Md(node.childNodes[nodeIndex]);
+  //   } else {
+  //     const pDom = new xmlDom().parseFromString(node.childNodes[nodeIndex].toString());
+  //     const pNode = xpath.select("//text()", pDom);
+  //     for (let pIndex = 0; pIndex < pNode.length; pIndex ++) {
+  //       md += pNode[pIndex].nodeValue;
+  //       pNode[pIndex].hasRead = true;
+  //     }
+  //   }
+  //   node.childNodes[nodeIndex].hasRead = true;
+  // }
   return md;
 }
+
+const ul2Md = (node, item) => {
+  if (node.hasRead) return '';
+
+  let key = `*`, ulMd = ``; // 默认为无序列表
+  if (item.key === 'ol') key = [];
+  ulMd += node.parentNode.nodeName === 'li' ? `\n    ` : ''
+  for (let index = 0; index < node.childNodes.length; index ++) {
+    if (node.childNodes[index].hasRead) return;
+    ulMd += `${key === '*' ? '*' : `${index + 1}、`} ${li2Md(node && node.childNodes && node.childNodes[index], key)} \n`;
+    node.childNodes[index].hasRead = true;
+  }
+  node.hasRead = true;
+  return ulMd;
+  // let md = li2Md(node && node.childNodes);
+}
+
+const li2Md = (node, key) => {
+  if (node.hasRead) return '';
+
+  let limd = ``;
+  for (let index = 0; index < node.childNodes.length; index ++) {
+    if(node.childNodes[index].hasRead)  return;
+
+    if (node.childNodes[index].nodeName === '#text') {
+      limd += `${node.childNodes[index].data}`
+    } else {
+      limd += xml2Md(node.childNodes[index]);
+    }
+
+    node.childNodes[index].hasRead = true;
+  }
+
+  node.hasRead = true;
+  return limd;
+  // console.info('*********************');
+}
+
+
 
 const table2Md = (node) => {
   if (node.hasRead) return '';
@@ -317,24 +440,28 @@ const codeTrMd = (node) => {
 
 const filterTable = (node) => {
   const tdNode = findtd(node);
-  console.info(tdNode)
-  // const filClass = xpath.select1('//@class', tdNode);
-  // console.info(filClass && filClass.value);
-  // const filDom = new xmlDom().parseFromString(node.parentNode.toString());
-  // const filClass = xpath.select1('//@class', filDom);
-  // if (filClass && filClass.value.indexOf('confluenceT') > -1) return true;
+  if (!tdNode) return false;
+  const filClass = xpath.select1('//td/@class', tdNode);
+  const thClass = xpath.select1('//th/@class', tdNode);
+  if (filClass && (filClass.value.indexOf('confluenceT') > -1 || thClass.value.indexOf('confluenceT') > -1)) return true;
   return false;
 }
 
 findtd = (node) => {
-  if (node && node.nodeName === 'td') return node;
-  findtd(node && node.parentNode);
+  const parent_node = node.parentNode;
+  const pppnode = parent_node && parent_node.parentNode;
+  const forthnode = pppnode && pppnode.parentNode;
+  if (node && thdTag.indexOf(node.nodeName) > -1) return node;
+  if (parent_node && thdTag.indexOf(parent_node.nodeName) > -1) return parent_node;
+  if (pppnode && thdTag.indexOf(pppnode.nodeName) > -1) return pppnode;
+  if (forthnode && thdTag.indexOf(forthnode.nodeName) > -1) return forthnode;
+  return false;
 }
 
 const htmlEncode = (str) => {
   return str.replace(/[<>"&\/`']/g, '');
 }
 
-const cookie = 'sticky-uuid4=8e089e9a-0b38-4387-befe-5dc0740d527f:127.0.0.1; JSESSIONID=1EBF1D8A825C4416746BEF70BF44136B; mywork.tab.tasks=false';
-module.exports = getHtmlByUrl('https://wiki.maoyan.com/pages/viewpage.action?pageId=14693585', cookie);
+const cookie = 'mywork.tab.tasks=false; sticky-uuid4=dc6820b1-29b7-4c21-b0ea-3f2b86144859:127.0.0.1; _lxsdk_cuid=16c94541ed0c8-0ac30940c8f22f-38637701-384000-16c94541ed0c8; _lxsdk=291F42F0BF3411E9A63685E18D47EDA539F6E73BCF9342DBBC7086942F228A61; __mta=120976055.1565856636745.1565856636745.1565861586342.2; JSESSIONID=1AB16CA516D28F0B9B9B49E52AB98CBA';
+module.exports = getHtmlByUrl('https://wiki.maoyan.com/pages/viewpage.action?pageId=42629340', cookie);
 // module.exports = html2Xml(demostr);
