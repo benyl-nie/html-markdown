@@ -462,6 +462,6 @@ const htmlEncode = (str) => {
   return str.replace(/[<>"&\/`']/g, '');
 }
 
-const cookie = 'mywork.tab.tasks=false; sticky-uuid4=dc6820b1-29b7-4c21-b0ea-3f2b86144859:127.0.0.1; _lxsdk_cuid=16c94541ed0c8-0ac30940c8f22f-38637701-384000-16c94541ed0c8; _lxsdk=291F42F0BF3411E9A63685E18D47EDA539F6E73BCF9342DBBC7086942F228A61; __mta=120976055.1565856636745.1565856636745.1565861586342.2; JSESSIONID=1AB16CA516D28F0B9B9B49E52AB98CBA';
-module.exports = getHtmlByUrl('https://wiki.maoyan.com/pages/viewpage.action?pageId=42629340', cookie);
+const cookie = '';
+module.exports = getHtmlByUrl('www.baidu.com', cookie);
 // module.exports = html2Xml(demostr);
