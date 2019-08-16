@@ -74,7 +74,7 @@ const html2Xml = async (str) => {
     for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
       deepTraversal(doc.childNodes[nodeIndex]);
     }
-  // console.info(markdownStr);
+    console.info(markdownStr);
    return markdownStr;
   });
 };
@@ -162,13 +162,6 @@ const xml2Md = (node) => {
 
 
 const default2Md = (node, item) => {
-
-//  if (node.nodeName === 'pre') {
-//   console.info(node.toString());
-//   console.info('*******************');
-//   code2Md();
-//   // console.info(node.toString());
-//  }
   // 已读节点不再读取
   if (node.hasRead) return '';
 
@@ -179,6 +172,7 @@ const default2Md = (node, item) => {
   const parentClass = xpath.select1("//@class", parentDom) && xpath.select1("//@class", parentDom).nodeValue;
   if (parentClass && parentClass.indexOf('table') > -1) return '';
   if (tableNode.indexOf(node.parentNode.nodeName) > -1) return '';
+
   const tableFlag = filterTable(node);
   let md = ``;
   if (tableFlag) return '';
@@ -191,37 +185,18 @@ const default2Md = (node, item) => {
     let value = ``;
     for (let dIndex = 0; dIndex < node.childNodes.length; dIndex ++) {
       const ccnode = node.childNodes[dIndex];
-      for (let ccIndex = 0; ccIndex < ccnode.length; ccIndex ++) {
-        if (ccnode[ccIndex] && ccnode[ccIndex].hasRead) return;
-        if (ccnode[ccIndex] && ccnode[ccIndex].nodeName === '#text') value += ccnode[ccIndex].data;
-        // const thirdNode = ccnode[ccIndex].childNodes;
-        // for (let thIndex = 0; thIndex < thirdNode.length; thIndex++) {
-        //   if (thirdNode[thIndex] && thirdNode[thIndex].hasRead) return;
-        //   if (thirdNode[thIndex] && thirdNode[thIndex].nodeName === '#text') value += ccnode[ccIndex].data;
-        //   value +=  thirdNode[thIndex] && thirdNode[thIndex].nodeValue || '';
-        // }
-        value +=  ccnode[ccIndex] && ccnode[ccIndex].nodeValue || '';
-
-      }
+      if (node.childNodes[dIndex] && node.childNodes[dIndex].hasRead) return;
+      if (node.childNodes[dIndex] && node.childNodes[dIndex].nodeName === '#text') value += node.childNodes[dIndex].data;
+      value += xml2Md(ccnode && node.childNodes[dIndex]);
     }
     md = value === '' ? `${item.value} `  :  blockFlag ? `${item.value} ${value}\n` : `${item.value} ${value}`;
-
-
-
-    // if (node.nodeName === '#text') {
-    //   console.info(node.toString());
-    //   value = node && node.data;
-    // } else {
-    //   value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
-    // }
-    // md = value === '' ?  `${item.value} `  :  blockFlag ? `${item.value} ${value}\n` : `${item.value} ${value}`;
   }
   node.hasRead = true;
   // md += `\n`;
   return md;
 }
 
-blockFlag2Md = (node, item) => {
+const blockFlag2Md = (node, item) => {
   if (node.hasRead) return '';
 
   let md = `${item.value} `;
@@ -256,10 +231,13 @@ const img2Md = (node, item) => {
 const a2Md = (node, item) => {
   if (node.hasRead) return '';
 
+
   const tableFlag = filterTable(node);
   if (tableFlag) return '';
 
   let alink = '';
+  const aNode = new xmlDom().parseFromString(node.toString());
+  const hrefpath = xpath.select1('/a/@href', aNode);
   for (let aIndex = 0; aIndex < node.attributes.length; aIndex ++) {
       const aItem = node.attributes[aIndex];
       if (aItem.nodeName === 'href') {
@@ -279,10 +257,17 @@ const strong2Md = (node, item) => {
   if (tableFlag) return '';
 
   let md = ``;
-  const parentSubFlag = blockLevelTag.indexOf(node.parentNode) <= -1 && node.parentNode.nextSibling;
-  const value = (node.childNodes && node.childNodes[0] && node.childNodes[0].data) || (node && node.data) || '';
-  if (value.trim() === '' || value === undefined || !value) return '';
-  md += value === '' ? '' : parentSubFlag ? `  **${value}**  ` : `  **${value}**   \n`  ;
+  const currntBlockFlag = node.nextSibling;
+  const parentSubFlag = blockLevelTag.indexOf(node.parentNode.nodeName) <= -1 && node.parentNode.nextSibling;
+
+  let value = ` **`;
+  for (let sIndex = 0; sIndex < node.childNodes.length; sIndex ++) {
+    if (node.childNodes[sIndex] && node.childNodes[sIndex].hasRead) return;
+    if (node.childNodes[sIndex] && node.childNodes[sIndex].nodeName === '#text') value += node.childNodes[sIndex].data.trim() || '';
+    value += xml2Md(node.childNodes[sIndex]).trim();
+    node.childNodes[sIndex].hasRead = true;
+  }
+  md += value === '**' ? '' : parentSubFlag || currntBlockFlag ? `${value}**  ` : `${value}**   \n`  ;
   node.hasRead = true;
   return md;
 }
@@ -300,38 +285,9 @@ const p2Md = (node, item) => {
   let md = ``;
   for (let index = 0; index < nodeChild.length; index ++) {
     if (nodeChild[index].hasRead) return;
-    if (nodeChild[index].nodeName === '#text') {
-      md += nodeChild[index].data;
-    } else {
-      const ccnode = nodeChild[index].childNodes;
-      for (let ccIndex = 0; ccIndex < ccnode.length; ccIndex ++) {
-        if (ccnode[ccIndex].nodeName === '#text') md += ccnode[ccIndex].data;
-        md += xml2Md(ccnode[ccIndex]);
-      }
-
-
-      // console.info(nodeChild[index].nodeName);
-      // if (nodeChild[index].nodeName === 'span') {
-      //   console.info(md);
-      //   md += xml2Md(node.childNodes[index].childNodes);
-      //   console.info(node.childNodes[index].childNodes.length);
-      //   console.info('*********************************');
-      //   console.info(md);
-      //   console.info('*********************************');
-      // } else {
-      //   md += xml2Md(node.childNodes[index]);
-      // }
-
-      // console.info(node.childNodes[index].toString());
-      // console.info('*********************************');
-      // console.info(md);
-      // console.info('*********************************');
-    }
-
-    // console.info(md);
-    // console.info('*********************************');
+    if (nodeChild[index].nodeName === '#text') md += nodeChild[index].data;
+    md += xml2Md(nodeChild[index]);
     nodeChild[index].hasRead = true;
-    // console.info(md);
   }
 
   node.hasRead = true;
@@ -341,12 +297,19 @@ const p2Md = (node, item) => {
 const ul2Md = (node, item) => {
   if (node.hasRead) return '';
 
-  let key = `*`, ulMd = ``; // 默认为无序列表
+  //  过滤table
+  const tableFlag = filterTable(node);
+  if (tableFlag) return '';
+
+  let key = `*`, ulMd = ``, liFlag = false; // 默认为无序列表
   if (item.key === 'ol') key = [];
-  ulMd += node.parentNode.nodeName === 'li' ? `\n    ` : ''
+  if (node.parentNode.nodeName === 'li') {
+    liFlag = true;
+  }
   for (let index = 0; index < node.childNodes.length; index ++) {
     if (node.childNodes[index].hasRead) return;
-    ulMd += `${key === '*' ? '*' : `${index + 1}、`} ${li2Md(node && node.childNodes && node.childNodes[index], key)} \n`;
+    if (ulMd.substr(-1) === '*') ulMd = ulMd.trim();
+    ulMd += `${key === '*' ? `${liFlag ? `\n  `: ''}*` : `${liFlag ? `\n  `: ''}${index + 1}、`} ${li2Md(node && node.childNodes && node.childNodes[index], key)} \n`;
     node.childNodes[index].hasRead = true;
   }
   node.hasRead = true;
@@ -356,13 +319,19 @@ const ul2Md = (node, item) => {
 const li2Md = (node, key) => {
   if (node.hasRead) return '';
 
+  //  过滤table
+  const tableFlag = filterTable(node);
+  if (tableFlag) return '';
+
   let limd = ``;
   for (let index = 0; index < node.childNodes.length; index ++) {
     if(node.childNodes[index].hasRead)  return;
 
     if (node.childNodes[index].nodeName === '#text') {
+      if (limd.substr('*')) limd = limd.trim();
       limd += `${node.childNodes[index].data}`
     } else {
+      if (limd.substr('*')) limd = limd.trim();
       limd += xml2Md(node.childNodes[index]);
     }
 
@@ -371,7 +340,6 @@ const li2Md = (node, key) => {
 
   node.hasRead = true;
   return limd;
-  // console.info('*********************');
 }
 
 
@@ -447,20 +415,39 @@ const findtd = (node) => {
   const parent_node = node.parentNode;
   const pppnode = parent_node && parent_node.parentNode;
   const forthnode = pppnode && pppnode.parentNode;
+  const fifthnode = forthnode && forthnode.parentNode;
   if (node && thdTag.indexOf(node.nodeName) > -1) return node;
   if (parent_node && thdTag.indexOf(parent_node.nodeName) > -1) return parent_node;
   if (pppnode && thdTag.indexOf(pppnode.nodeName) > -1) return pppnode;
   if (forthnode && thdTag.indexOf(forthnode.nodeName) > -1) return forthnode;
+  if (fifthnode && thdTag.indexOf(fifthnode.nodeName) > -1) return fifthnode;
   return false;
 }
 
+// pre tag code to markdown
 const code2Md = (node) => {
-  // console.info(node.());
+
+  // console.info(node.toString());
+  if (node.hasRead) return '';
+
+  // filter code tag from table
+  const tableFlag = filterTable(node);
+  if (tableFlag) return '';
+
+
   const codeDom = new xmlDom().parseFromString(node.toString());
   const nodepath = xpath.select1("/pre/text()",codeDom);
-  console.info(nodepath && nodepath.nodeValue);
-  console.info('*********************');
+  const nodeClass = xpath.select1("/pre/@class", codeDom);
+  if(!nodeClass || nodeClass === 'undefined' || (nodeClass && nodeClass.nodeValue).indexOf('highlighter') <= -1) return nodepath && nodepath.nodeValue || '';
+  const lanagepath = xpath.select1("/pre/@data-syntaxhighlighter-params", codeDom);
 
+
+  let md = '```';
+  let lanage = lanagepath && lanagepath.nodeValue && lanagepath.nodeValue.split(';') && lanagepath.nodeValue.split(';')[0].split(':')[1] || '';
+  md += `${lanage} \n ${nodepath && nodepath.nodeValue || ''} \n`;
+  md += '```';
+  node.hasRead = true;
+  return md;
 }
 
 
@@ -471,4 +458,3 @@ const htmlEncode = (str) => {
 
 const cookie = '';
 module.exports = getHtmlByUrl('', cookie);
-// module.exports = html2Xml(demostr);
