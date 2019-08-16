@@ -451,10 +451,5 @@ const code2Md = (node) => {
 }
 
 
-
-const htmlEncode = (str) => {
-  return str.replace(/[<>"&\/`']/g, '');
-}
-
 const cookie = '';
 module.exports = getHtmlByUrl('', cookie);
