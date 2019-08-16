@@ -48,7 +48,7 @@ const blockLevelTag = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'];
 const tableNode = ['tr', 'td', 'th', 'table', 'tbody', 'thead'];
 const thdTag = ['td', 'th'];
 const lineFlagArr = ['#',  '', '|'];
-let tdCount = 0;
+// let tdCount = 0;
 
 
 // 根据url爬取页面
@@ -74,7 +74,7 @@ const html2Xml = async (str) => {
     for (let nodeIndex = 0; nodeIndex < length; nodeIndex ++) {
       deepTraversal(doc.childNodes[nodeIndex]);
     }
-  console.info(markdownStr);
+  // console.info(markdownStr);
    return markdownStr;
   });
 };
@@ -144,6 +144,9 @@ const xml2Md = (node) => {
         case 'ul':
           md = ul2Md(node, item);
           break;
+        case 'pre':
+          md = code2Md(node, item);
+          break;
         default:
           md = default2Md(node, item);
           break;
@@ -156,7 +159,16 @@ const xml2Md = (node) => {
   return mds;
 };
 
+
+
 const default2Md = (node, item) => {
+
+//  if (node.nodeName === 'pre') {
+//   console.info(node.toString());
+//   console.info('*******************');
+//   code2Md();
+//   // console.info(node.toString());
+//  }
   // 已读节点不再读取
   if (node.hasRead) return '';
 
@@ -323,21 +335,6 @@ const p2Md = (node, item) => {
   }
 
   node.hasRead = true;
-
-  // for (let nodeIndex = 0; nodeIndex < nodeLen; nodeIndex ++) {
-  //   const flag = tagHtml.filter(item => item.key === node.childNodes[nodeIndex].nodeName);
-  //   if (flag.length > 0) {
-  //     md += xml2Md(node.childNodes[nodeIndex]);
-  //   } else {
-  //     const pDom = new xmlDom().parseFromString(node.childNodes[nodeIndex].toString());
-  //     const pNode = xpath.select("//text()", pDom);
-  //     for (let pIndex = 0; pIndex < pNode.length; pIndex ++) {
-  //       md += pNode[pIndex].nodeValue;
-  //       pNode[pIndex].hasRead = true;
-  //     }
-  //   }
-  //   node.childNodes[nodeIndex].hasRead = true;
-  // }
   return md;
 }
 
@@ -354,7 +351,6 @@ const ul2Md = (node, item) => {
   }
   node.hasRead = true;
   return ulMd;
-  // let md = li2Md(node && node.childNodes);
 }
 
 const li2Md = (node, key) => {
@@ -447,7 +443,7 @@ const filterTable = (node) => {
   return false;
 }
 
-findtd = (node) => {
+const findtd = (node) => {
   const parent_node = node.parentNode;
   const pppnode = parent_node && parent_node.parentNode;
   const forthnode = pppnode && pppnode.parentNode;
@@ -458,10 +454,21 @@ findtd = (node) => {
   return false;
 }
 
+const code2Md = (node) => {
+  // console.info(node.());
+  const codeDom = new xmlDom().parseFromString(node.toString());
+  const nodepath = xpath.select1("/pre/text()",codeDom);
+  console.info(nodepath && nodepath.nodeValue);
+  console.info('*********************');
+
+}
+
+
+
 const htmlEncode = (str) => {
   return str.replace(/[<>"&\/`']/g, '');
 }
 
 const cookie = '';
-module.exports = getHtmlByUrl('www.baidu.com', cookie);
+module.exports = getHtmlByUrl('', cookie);
 // module.exports = html2Xml(demostr);
